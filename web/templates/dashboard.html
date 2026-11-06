@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div id="dashboard"
+     hx-get="{{ url_for('ui.dashboard_partial') }}"
+     hx-trigger="every 30s"
+     hx-swap="innerHTML">
+  {% include "partials/dashboard.html" %}
+</div>
+{% endblock %}

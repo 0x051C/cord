@@ -1,0 +1,21 @@
+{% macro tab(dept, paper_kind, label, active) -%}
+<a href="{{ url_for('ui.departments', department=dept.value, kind=paper_kind.key) }}"
+   hx-get="{{ url_for('ui.department_partial', department=dept.value, kind=paper_kind.key) }}"
+   hx-target="#department-panel"
+   hx-push-url="{{ url_for('ui.departments', department=dept.value, kind=paper_kind.key) }}"
+   {% if active %}class="active" aria-current="page"{% endif %}>{{ label }}</a>
+{%- endmacro %}
+
+<nav class="tabs">
+  {% for dept in departments %}
+    {{ tab(dept, kind, department_labels[dept] ~ " (" ~ (counts[dept].values() | sum) ~ ")", dept == department) }}
+  {% endfor %}
+</nav>
+<nav class="tabs secondary">
+  {% for paper_kind in kinds %}
+    {{ tab(department, paper_kind, kind_labels[paper_kind.key] ~ " (" ~ counts[department].get(paper_kind.key, 0) ~ ")", paper_kind == kind) }}
+  {% endfor %}
+</nav>
+<div data-grid data-remote
+     data-url="{{ url_for('ui.api_department_records', department=department.value, kind=kind.key) }}"
+     data-columns='{{ columns | tojson }}'></div>

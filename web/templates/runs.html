@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Runs{% endblock %}
+{% block content %}
+<section class="panel">
+  <h1>Runs</h1>
+  <p class="muted">Every pipeline run, newest first. Click a row for its files, errors and department routing.</p>
+  <div data-grid
+       data-url="{{ url_for('ui.api_runs') }}"
+       data-columns='{{ columns | tojson }}'
+       data-row-link="/runs/{id}"></div>
+</section>
+{% endblock %}

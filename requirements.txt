@@ -1,0 +1,10 @@
+pydantic>=2.11
+dynaconf[ini]>=3.2
+jinja2>=3.1          # @jinja expressions in cord.toml
+pandas>=2.2
+openpyxl>=3.1        # xlsx export
+pymongo>=4.6         # production storage
+smbprotocol>=1.13    # production file share
+quart>=0.20          # web dashboard (brings hypercorn)
+pyspnego>=0.10       # Kerberos sign-in; on Linux also: pip install "pyspnego[kerberos]"
+pytest>=8

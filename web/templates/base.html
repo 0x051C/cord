@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="htmx-config" content='{"includeIndicatorStyles": false}'>
+  <title>{% block title %}Dashboard{% endblock %} · Cord</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/tabulator/tabulator_simple.min.css') }}">
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+  <script src="{{ url_for('static', filename='vendor/htmx/htmx.min.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='vendor/tabulator/tabulator.min.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='app.js') }}" defer></script>
+</head>
+<body hx-boost="true">
+  <header class="topbar">
+    <a class="brand" href="{{ url_for('ui.dashboard') }}">Cord <span>declaration ETL</span></a>
+    <nav>
+      {% set nav = [
+        (url_for('ui.dashboard'), 'Dashboard', request.path == '/'),
+        (url_for('ui.runs'), 'Runs', request.path.startswith('/runs')),
+        (url_for('ui.errors'), 'Errors', request.path.startswith('/errors')),
+        (url_for('ui.departments'), 'Departments', request.path.startswith('/departments')),
+      ] %}
+      {% for href, label, active in nav %}
+        <a href="{{ href }}"{% if active %} class="active" aria-current="page"{% endif %}>{{ label }}</a>
+      {% endfor %}
+    </nav>
+    <div class="who">
+      <span class="env env-{{ environment }}">{{ environment }}</span>
+      {% if principal %}<span class="principal">{{ principal }}</span>{% endif %}
+    </div>
+  </header>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

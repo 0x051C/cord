@@ -1,0 +1,43 @@
+# Local / test profile, activated with:  CORD_ENV=local
+# Everything stays on this machine: local folders instead of the SMB share,
+# SQLite instead of MongoDB. Relative paths are resolved from the project root.
+
+filesystem = "local"
+storage_backend = "sqlite"
+sqlite_path = "sandbox/cord.sqlite3"
+
+input_files_path = "sandbox/input"
+xlsx_path_common = "sandbox/output/common"
+xlsx_path_impdiv = "sandbox/output/impdiv"
+xlsx_path_expdiv = "sandbox/output/expdiv"
+log_dir = "sandbox/logs"
+fallback_dump_path = "sandbox"
+
+# Input file name patterns (same as production)
+re_waybill = '^ttn_.*\.csv$'
+re_statement = '^euro_.*\.csv$'
+re_declaration = '^gtd_.*\.csv$'
+re_updates = '^gtd_korre[ck]t_.*\.csv$'
+csv_delimiters = "^"
+
+days_to_fetch = 180
+
+# Routing of stored records to departments
+this_bank_classifier = 51000050
+# The patterns match the Russian wording of the source data, so they stay in Russian:
+# import: IM40 declarations, "Imp..." (import), "voz..." (return)
+re_for_impdiv = '^.*(ИМ40).*$|^\s*([Ии]мп.*)$|^.*(в[оа]зв.*)$'
+# export: EK10 declarations, "real..." (sale), "Eks..." (export)
+re_for_expdiv = '^.*(ЭК10).*$|^.*(реал.*)$|^\s*([Ээ]кс.*)$'
+# common: EK11 (re-export), IM41 (re-import), sales and exports
+re_for_both = '^.*(ЭК11).*$|^.*(ИМ41).*$|^.*(реал.*)$|^.*([Ээ]кс.*)$'
+
+clearance_statement_output_filename = 'euro_{0} — {1}'
+declaration_output_filename = 'gtd_{0} — {1}'
+declaration_updates_output_filename = 'gtd_updates_{0} — {1}'
+waybill_output_filename = 'ttn_{0} — {1}'
+
+# Web dashboard (python main.py --env local serve): no sign-in, loopback only
+web_auth = "none"
+web_host = "127.0.0.1"
+web_port = 8000

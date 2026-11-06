@@ -1,0 +1,10 @@
+<h3>Row {{ error.row }} of <code>{{ error.file }}</code></h3>
+<dl class="facts">
+  <dt>Type</dt><dd>{{ kind_labels.get(error.kind, error.kind) }}</dd>
+  <dt>Field</dt><dd><code>{{ error.field }}</code></dd>
+  <dt>Message</dt><dd class="bad">{{ error.message }}</dd>
+  <dt>Value</dt><dd><code>{{ error.value }}</code></dd>
+  <dt>Run</dt><dd><a href="{{ url_for('ui.run_detail', run_id=error.run_id) }}">{{ error.run_id }}</a></dd>
+</dl>
+<h4>Source row</h4>
+<pre class="context">{{ error.context_pretty }}</pre>

@@ -1,0 +1,104 @@
+{% from "partials/status.html" import badge %}
+{% set last = view.last_run %}
+{% set imported = view.last_import %}
+{% if not last %}
+  <section class="panel empty">
+    <h1>No runs yet</h1>
+    {% if environment == "local" %}
+      <p>Generate mock data and process it:</p>
+      <pre>python main.py --env local seed
+python main.py --env local run</pre>
+    {% else %}
+      <p>The pipeline has not recorded a run in this database yet.</p>
+    {% endif %}
+  </section>
+{% else %}
+  <section class="cards">
+    <a class="card" href="{{ url_for('ui.run_detail', run_id=last.id) }}">
+      <span class="label">Last run</span>
+      <span class="value small">{{ last.started }}</span>
+      {{ badge(last) }}
+    </a>
+    {% if imported %}
+    <a class="card" href="{{ url_for('ui.run_detail', run_id=imported.id) }}">
+      <span class="label">Files processed</span>
+      <span class="value">{{ imported.file_count }}</span>
+      <span class="hint muted">last import {{ imported.started }}</span>
+    </a>
+    <div class="card">
+      <span class="label">Valid rows (last import)</span>
+      <span class="value ok">{{ imported.valid_rows }}</span>
+    </div>
+    <a class="card" href="{{ url_for('ui.errors', run=imported.id) }}">
+      <span class="label">Invalid rows (last import)</span>
+      <span class="value {{ 'bad' if imported.invalid_rows else '' }}">{{ imported.invalid_rows }}</span>
+      {% if imported.error_count %}<span class="hint">{{ imported.error_count }} errors →</span>{% endif %}
+    </a>
+    {% else %}
+    <div class="card">
+      <span class="label">Files processed</span>
+      <span class="value">0</span>
+      <span class="hint muted">no run has found input files yet</span>
+    </div>
+    {% endif %}
+    <div class="card">
+      <span class="label">Records stored (all time)</span>
+      <span class="value">{{ view.totals.values() | sum }}</span>
+    </div>
+  </section>
+{% endif %}
+
+<section class="panel">
+  <h2>Records per department <small>stored in the last {{ view.days }} days</small></h2>
+  <table class="matrix">
+    <thead>
+      <tr>
+        <th></th>
+        {% for kind in kinds %}<th>{{ kind_labels[kind.key] }}</th>{% endfor %}
+        <th>Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for department in departments %}
+        {% set row = view.window[department] %}
+        <tr>
+          <th>{{ department_labels[department] }}</th>
+          {% for kind in kinds %}
+            <td><a href="{{ url_for('ui.departments', department=department.value, kind=kind.key) }}">{{ row.get(kind.key, 0) }}</a></td>
+          {% endfor %}
+          <td class="total">{{ row.values() | sum }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if view.last_export %}
+    <p class="muted">Reports of the last export ({{ view.last_export.started }}) went to:
+      {% for department in departments %}
+        {{ department_labels[department] }} — {{ (view.last_export.routed.get(department.value) or {}).values() | sum }} records{{ ";" if not loop.last }}
+      {% endfor %}
+    </p>
+  {% endif %}
+</section>
+
+{% if view.runs %}
+<section class="panel">
+  <h2>Recent runs <small><a href="{{ url_for('ui.runs') }}">all runs →</a></small></h2>
+  <table class="list">
+    <thead><tr><th>Started</th><th>Status</th><th class="num">Files</th><th class="num">Valid</th><th class="num">Invalid</th><th class="num">Stored</th><th class="num">Reports</th></tr></thead>
+    <tbody>
+      {% for run in view.runs %}
+        <tr>
+          <td><a href="{{ url_for('ui.run_detail', run_id=run.id) }}">{{ run.started }}</a></td>
+          <td>{{ badge(run) }}</td>
+          <td class="num">{{ run.file_count }}</td>
+          <td class="num">{{ run.valid_rows }}</td>
+          <td class="num {{ 'bad' if run.invalid_rows else '' }}">{{ run.invalid_rows }}</td>
+          <td class="num">{{ run.stored_total }}</td>
+          <td class="num">{{ run.report_count }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p class="muted refresh">Refreshes every 30 seconds.</p>
+</section>
+{% endif %}

@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Error{% endblock %}
+{% block content %}
+<section class="panel">
+  <h1>Something went wrong</h1>
+  <p>The page could not be loaded. If the database is unreachable, try again in a moment.</p>
+  {% if environment != "production" %}<pre class="context">{{ error.__class__.__name__ }}: {{ error }}</pre>{% endif %}
+</section>
+{% endblock %}

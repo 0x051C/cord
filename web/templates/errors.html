@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Errors{% endblock %}
+{% block content %}
+<section class="panel" id="errors-panel">
+  <h1>Validation errors</h1>
+  {% if not runs %}
+    <p class="muted">No run has recorded validation errors.</p>
+  {% else %}
+    <form class="toolbar" action="{{ url_for('ui.errors') }}" method="get"
+          hx-get="{{ url_for('ui.errors') }}" hx-trigger="change"
+          hx-select="#errors-panel" hx-target="#errors-panel" hx-swap="outerHTML" hx-push-url="true">
+      <label>Run
+        <select name="run">
+          {% for run in runs %}
+            <option value="{{ run.id }}"{% if run.id == selected %} selected{% endif %}>
+              {{ run.started }} — {{ run.error_count }} errors in {{ run.invalid_rows }} rows
+            </option>
+          {% endfor %}
+        </select>
+      </label>
+      <noscript><button type="submit">Show</button></noscript>
+      <a href="{{ url_for('ui.run_detail', run_id=selected) }}">run details →</a>
+    </form>
+    <p class="muted">Use the boxes under the column titles to filter, click a row to see the whole source row.</p>
+    <div class="split">
+      <div data-grid data-remote
+           data-url="{{ url_for('ui.api_errors', run=selected) }}"
+           data-columns='{{ error_columns | tojson }}'
+           data-row-detail="/partials/errors/{id}"
+           data-row-detail-target="#error-detail"></div>
+      <aside id="error-detail" class="detail muted">Select an error.</aside>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

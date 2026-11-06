@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Sign-in required · Cord</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+</head>
+<body>
+  <main class="narrow">
+    <section class="panel">
+      {% if failed %}
+        <h1>Kerberos sign-in failed</h1>
+        <p>Your browser sent a ticket, but the server could not validate it. Please contact the administrator;
+           the reason is in the server log.</p>
+      {% else %}
+        <h1>Windows sign-in required</h1>
+        <p>This dashboard signs you in automatically with your Windows (Kerberos) login. Your browser did not
+           send a ticket, which usually means:</p>
+        <ul>
+          <li>you are not signed in to the domain on this computer, or</li>
+          <li>this address is not trusted for integrated authentication (Edge/Chrome: intranet zone or the
+              <code>AuthServerAllowlist</code> policy; Firefox: <code>network.negotiate-auth.trusted-uris</code>), or</li>
+          <li>you opened the site by IP address or a short name instead of its full DNS name.</li>
+        </ul>
+      {% endif %}
+    </section>
+  </main>
+</body>
+</html>

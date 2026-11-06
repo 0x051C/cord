@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Departments{% endblock %}
+{% block content %}
+<section class="panel">
+  <h1>Departments</h1>
+  <p class="muted">Records stored in the last {{ days }} days, routed the same way as the xlsx reports
+    (patterns <code>re_for_both</code>, <code>re_for_impdiv</code>, <code>re_for_expdiv</code>).</p>
+  <div id="department-panel">
+    {% include "partials/department.html" %}
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,10 @@
+[project]
+name = "cord"
+version = "0.2.0"
+description = "Waybill / customs declaration parsing ETL built on Pydantic"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-q"

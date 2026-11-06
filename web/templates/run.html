@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% from "partials/status.html" import badge %}
+{% block title %}Run {{ run.id }}{% endblock %}
+{% block content %}
+<section class="panel">
+  <h1>Run {{ run.id }} {{ badge(run) }}</h1>
+  <dl class="facts">
+    <dt>Started</dt><dd>{{ run.started }}</dd>
+    <dt>Finished</dt><dd>{{ run.finished or "—" }}</dd>
+    <dt>Environment</dt><dd>{{ run.environment }}</dd>
+    <dt>Rows</dt><dd><span class="ok">{{ run.valid_rows }} valid</span> · <span class="{{ 'bad' if run.invalid_rows else '' }}">{{ run.invalid_rows }} invalid</span> ({{ run.error_count }} errors)</dd>
+    <dt>Stored</dt><dd>{% for key, count in (run.stored or {}).items() %}{{ kind_labels.get(key, key) }}: {{ count }}{{ ", " if not loop.last }}{% else %}—{% endfor %}</dd>
+    {% if run.message %}<dt>Message</dt><dd class="bad">{{ run.message }}</dd>{% endif %}
+    {% if run.fallback_dump %}<dt>Fallback dump</dt><dd><code>{{ run.fallback_dump }}</code></dd>{% endif %}
+  </dl>
+</section>
+
+<section class="panel">
+  <h2>Files</h2>
+  {% if run.files %}
+  <table class="list">
+    <thead><tr><th>File</th><th>Type</th><th class="num">Rows</th><th class="num">Valid</th><th class="num">Invalid</th><th>Problem</th></tr></thead>
+    <tbody>
+      {% for file in run.files %}
+        <tr>
+          <td><code>{{ file.name }}</code></td>
+          <td>{{ kind_labels.get(file.kind, file.kind) }}</td>
+          <td class="num">{{ file.rows }}</td>
+          <td class="num">{{ file.valid }}</td>
+          <td class="num {{ 'bad' if file.invalid else '' }}">{{ file.invalid }}</td>
+          <td class="bad">{{ file.error or "" }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+    <p class="muted">No input files in this run.</p>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <h2>Departments <small>records in the reports written by this run</small></h2>
+  {% if run.routed %}
+  <table class="matrix">
+    <thead><tr><th></th>{% for kind in kinds %}<th>{{ kind_labels[kind.key] }}</th>{% endfor %}<th>Total</th></tr></thead>
+    <tbody>
+      {% for department in departments %}
+        {% set row = run.routed.get(department.value) or {} %}
+        <tr>
+          <th>{{ department_labels[department] }}</th>
+          {% for kind in kinds %}<td>{{ row.get(kind.key, "—") }}</td>{% endfor %}
+          <td class="total">{{ row.values() | sum }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if run.exported %}
+    <details><summary>{{ run.exported | length }} report files</summary>
+      <ul class="files">{% for path in run.exported %}<li><code>{{ path }}</code></li>{% endfor %}</ul>
+    </details>
+  {% endif %}
+  {% else %}
+    <p class="muted">No reports were written in this run.</p>
+  {% endif %}
+</section>
+
+{% if run.error_count %}
+<section class="panel">
+  <h2>Validation errors <small>click a row to see the whole source row</small></h2>
+  <div class="split">
+    <div data-grid data-remote
+         data-url="{{ url_for('ui.api_errors', run=run.id) }}"
+         data-columns='{{ error_columns | tojson }}'
+         data-row-detail="/partials/errors/{id}"
+         data-row-detail-target="#error-detail"></div>
+    <aside id="error-detail" class="detail muted">Select an error.</aside>
+  </div>
+</section>
+{% endif %}
+{% endblock %}
