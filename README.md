@@ -29,7 +29,7 @@ python main.py --env local reset           # delete sandbox/
 | option | default | |
 |---|---|---|
 | `--rows N` | 50 | rows per document type |
-| `--kinds ...` | all | `declaration declarationupdates clearancestatement waybill` |
+| `--kinds K` | all | repeatable or comma separated: `declaration`, `declarationupdates`, `clearancestatement`, `waybill` (e.g. `--kinds waybill,declaration`) |
 | `--invalid-ratio R` | 0.1 | share of deliberately broken rows (to see validation errors in `sandbox/logs/validation.log`) |
 | `--target csv\|db\|both` | csv | `csv` writes input files for `run`; `db` inserts records straight into SQLite, spread over the last `days_to_fetch` days |
 | `--seed N` | random | reproducible data |
@@ -40,7 +40,8 @@ fields in column order and fills them using the active validation settings
 Every generated row is validated with the real model, so a schema change the
 generator does not know about fails loudly (`application/mock_data.py`).
 
-`seed` and `reset` refuse to run with the production profile.
+`seed` and `reset` refuse to run with the production profile. `python main.py --help`
+(or `<command> --help`) lists every option.
 
 `CORD_ENV=local` can be used instead of `--env local`, and any setting can be
 overridden with `CORD_<SETTING>` environment variables.

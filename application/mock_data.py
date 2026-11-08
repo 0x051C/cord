@@ -332,4 +332,4 @@ def kinds_from_names(names: Optional[Iterable[str]]) -> list[PaperKind]:
     try:
         return [by_key[name] for name in names]
     except KeyError as e:
-        raise SystemExit(f"Unknown kind {e}, expected: {', '.join(by_key)}")
+        raise ValueError(f"unknown kind {e}, expected: {', '.join(by_key)}") from None
