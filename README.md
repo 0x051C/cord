@@ -1,6 +1,6 @@
 # waybill-declaration_parsing_models
 
-Parsing practice for a Django/FastAPI ETL: customs declarations (GTD), their
+Parsing practice for an ETL: customs declarations (GTD), their
 corrections, clearance statements and waybills (TTN) arrive as `^`-delimited
 files, are validated with Pydantic models, stored, and routed to department
 reports (xlsx).
