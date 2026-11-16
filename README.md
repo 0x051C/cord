@@ -149,13 +149,88 @@ kept in a signed, HttpOnly session cookie.
 4. Logs are copied next to the reports; a `__CLEAR__` file in the input folder
    truncates them afterwards.
 
+## Running on Apache Airflow
+
+`dags/cord_etl.py` runs the same steps as separate Airflow tasks, hourly by default
+(`CORD_SCHEDULE` overrides the schedule):
+
+```
+extract -> load -> has_new_records -> publish -> deliver_logs -> record
+```
+
+| task | does | on failure |
+|---|---|---|
+| `extract` | validates new input files, marks them processed | not retried: files are renamed once read |
+| `load` | stores the validated records | retried 3 times; the last attempt dumps the records to `output_<time>.json` if storage is still down |
+| `has_new_records` | skips `publish` when nothing was stored | |
+| `publish` | routes and exports the xlsx reports | retried 2 times |
+| `deliver_logs`, `record` | copy the logs; save the run to the dashboard journal | run even when a step failed; `record` then fails the DAG run |
+
+Tasks run in separate processes, so a run keeps its state (summary, errors, validated
+records) in a stage file, `<staging_path>/<run id>.json`; retried steps work from it and
+never store a record twice. The file is removed once the run is recorded, and kept when
+the run failed or storage was down. Only one run is active at a time. The steps live in
+`application/steps.py`; `python main.py run` still does everything in one process.
+
+Try it locally (Airflow in its own virtualenv, sandbox data, SQLite):
+
+```sh
+uv venv --python 3.14 .venv-airflow
+VIRTUAL_ENV=.venv-airflow uv pip install "apache-airflow==3.4.0" -r requirements.txt \
+  --constraint https://raw.githubusercontent.com/apache/airflow/constraints-3.4.0/constraints-3.14.txt
+
+export AIRFLOW_HOME=$PWD/.airflow AIRFLOW__CORE__DAGS_FOLDER=$PWD/dags \
+       AIRFLOW__CORE__LOAD_EXAMPLES=False CORD_ENV=local
+python main.py --env local seed                   # mock input files
+.venv-airflow/bin/airflow db migrate
+.venv-airflow/bin/airflow dags test cord_etl      # one run, in this terminal
+.venv-airflow/bin/airflow standalone              # or: scheduler + UI on http://localhost:8080
+```
+
+The runs show up in the dashboard (`python main.py --env local serve`) like CLI runs.
+
+### Xonsh: activate the Airflow virtualenv automatically
+
+`tools/xonsh/airflow_venv.xsh` is an [autovox](https://github.com/xonsh/xontrib-vox) rule:
+entering the project (or any folder below it) activates `.venv-airflow` and sets
+`AIRFLOW_HOME`, `AIRFLOW__CORE__DAGS_FOLDER`, `AIRFLOW__CORE__LOAD_EXAMPLES=False` and
+`CORD_ENV=local` (variables you already set yourself are left alone); leaving the project
+deactivates it and removes them again. It works for any folder that has a `.venv-airflow`.
+
+1. Load vox and autovox in `~/.xonshrc` (once):
+
+   ```xonsh
+   xontrib load vox autovox
+   ```
+
+   They come with the `xontrib-vox` package: `xpip install xontrib-vox`.
+
+2. Link the rule into xonsh's rc.d folder, which xonsh reads after `~/.xonshrc`:
+
+   ```xonsh
+   mkdir -p ~/.config/xonsh/rc.d
+   ln -s $PWD/tools/xonsh/airflow_venv.xsh ~/.config/xonsh/rc.d/
+   ```
+
+3. Open a new shell and `cd` into the project:
+
+   ```xonsh
+   cd /path/to/cord
+   which airflow          # .../cord/.venv-airflow/bin/airflow
+   airflow dags test cord_etl
+   ```
+
+`vox deactivate` works as usual; the variables are removed with it. In bash or zsh, run
+`source .venv-airflow/bin/activate` and the `export` line above instead.
+
 ## Layout
 
 ```
 main.py                         CLI (run / seed / reset / serve)
 application/
   configuration_handling.py     dynaconf settings and profiles
-  pipeline.py                   the run, step by step
+  pipeline.py                   the run, step by step (one process)
+  steps.py                      the same steps for separate processes (Airflow), stage file
   pipeline_config.py            paths/patterns resolved from settings
   ingest.py                     file discovery, rotation, csv reading, row validation
   reports.py                    department routing, xlsx export
@@ -175,6 +250,8 @@ models/
 config/
   validation_config.py          validation settings (+ optional validation.ini)
   profiles/local.toml           local test profile
+dags/
+  cord_etl.py                   Airflow DAG
 tests/
 ```
 
@@ -184,4 +261,6 @@ tests/
 .venv/bin/python -m pytest
 ```
 
-The tests use the local profile and temporary folders/databases.
+The tests use the local profile and temporary folders/databases. The DAG tests
+(`tests/test_dag.py`) are skipped unless Airflow is installed:
+`.venv-airflow/bin/python -m pytest`.

@@ -21,6 +21,7 @@ class PipelineConfig:
     output_filenames: dict[str, str]  # kind key -> xlsx name template
     log_dir: str
     fallback_dump_dir: str
+    staging_dir: str = "staging"  # run state shared by the Airflow tasks (application/steps.py)
     input_files_regex: Optional[str] = None
     csv_delimiters: str = "^"
     days_to_fetch: int = 180
@@ -50,9 +51,10 @@ class PipelineConfig:
                 kind.key: settings.get(kind.output_filename_setting, kind.default_output_filename)
                 for kind in PAPER_KINDS
             },
-            # logs and the fallback dump are always written locally
+            # logs, the fallback dump and the Airflow run state are always written locally
             log_dir=resolve_path(settings.get("log_dir", ".")),
             fallback_dump_dir=resolve_path(settings.get("fallback_dump_path", ".")),
+            staging_dir=resolve_path(settings.get("staging_path", "staging")),
             input_files_regex=settings.get("input_files_regex"),
             csv_delimiters=settings.get("csv_delimiters", "^"),
             days_to_fetch=int(settings.get("days_to_fetch", 180)),

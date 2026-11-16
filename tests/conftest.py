@@ -38,6 +38,7 @@ def pipeline_config(tmp_path) -> PipelineConfig:
         output_dirs={department: str(tmp_path / "output" / department.value) for department in Department},
         log_dir=str(tmp_path / "logs"),
         fallback_dump_dir=str(tmp_path),
+        staging_dir=str(tmp_path / "staging"),
     )
 
 

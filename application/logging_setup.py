@@ -19,8 +19,12 @@ class _FirstLineFormatter(logging.Formatter):
         return super().format(short)
 
 
-def configure_logging(log_dir, console: bool = True) -> Path:
-    """(Re)install the file handlers in ``log_dir``; safe to call more than once."""
+def configure_logging(log_dir, console: bool = True, new_run: bool = True) -> Path:
+    """(Re)install the file handlers in ``log_dir``; safe to call more than once.
+
+    ``smb.log`` is started afresh for each run; later steps of the same run (Airflow tasks,
+    each in its own process) pass ``new_run=False`` to append to it instead.
+    """
     for logger, handler in _installed:
         logger.removeHandler(handler)
         handler.close()
@@ -34,7 +38,7 @@ def configure_logging(log_dir, console: bool = True) -> Path:
 
     handlers = [
         (validation_logger, logging.FileHandler(log_dir / "validation.log", mode="a", encoding="utf-8")),
-        (smb_logger, logging.FileHandler(log_dir / "smb.log", mode="w", encoding="utf-8")),
+        (smb_logger, logging.FileHandler(log_dir / "smb.log", mode="w" if new_run else "a", encoding="utf-8")),
     ]
     if console:
         console_handler = logging.StreamHandler(stream=sys.stdout)

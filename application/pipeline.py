@@ -56,6 +56,27 @@ class RunReport:
     def start(cls, now: datetime, environment: str) -> "RunReport":
         return cls(id=f"{now:%Y%m%d-%H%M%S}-{uuid.uuid4().hex[:6]}", started_at=now, environment=environment)
 
+    @classmethod
+    def from_document(cls, document: dict, errors: list[dict]) -> "RunReport":
+        """Inverse of ``to_document`` (plus the separately stored errors)."""
+        finished = document.get("finished_at")
+        return cls(
+            id=document["id"],
+            started_at=datetime.fromisoformat(document["started_at"]),
+            environment=document.get("environment", ""),
+            finished_at=datetime.fromisoformat(finished) if finished else None,
+            status=document.get("status", STATUS_OK),
+            message=document.get("message", ""),
+            files=document.get("files", []),
+            valid_rows=document.get("valid_rows", 0),
+            invalid_rows=document.get("invalid_rows", 0),
+            stored=document.get("stored", {}),
+            routed=document.get("routed", {}),
+            exported=document.get("exported", []),
+            fallback_dump=document.get("fallback_dump"),
+            errors=[ingest.RowError(**error) for error in errors],
+        )
+
     def to_document(self) -> dict:
         """JSON-compatible summary stored in the run journal (errors are stored separately)."""
         return {
@@ -90,24 +111,55 @@ class RunReport:
         return "\n".join(lines)
 
 
-def store(repository: Repository, papers: list[Paper], created_at: Optional[datetime] = None) -> dict[str, int]:
+def group_documents(papers: list[Paper]) -> dict[str, list[dict]]:
+    """Validated papers as JSON-compatible documents, grouped by paper kind key."""
     grouped: dict[str, list[dict]] = dict()
     for paper in papers:
         grouped.setdefault(kind_of(paper).key, []).append(paper.model_dump(mode="json"))
+    return grouped
+
+
+def store_documents(
+    repository: Repository, grouped: dict[str, list[dict]], created_at: Optional[datetime] = None
+) -> dict[str, int]:
     return {key: repository.insert_many(key, documents, created_at=created_at) for key, documents in grouped.items()}
 
 
-def dump_fallback(papers: list[Paper], directory: str, now: datetime) -> str:
+def store(repository: Repository, papers: list[Paper], created_at: Optional[datetime] = None) -> dict[str, int]:
+    return store_documents(repository, group_documents(papers), created_at=created_at)
+
+
+def dump_documents(grouped: dict[str, list[dict]], directory: str, now: datetime) -> str:
     path = Path(directory) / f"output_{now.strftime('%Y-%m-%d_%H-%M-%S')}.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
         "received_timestamp": now.timestamp(),
         "paper_list": [
-            {"_id": uuid.uuid4().hex, "_kind": kind_of(paper).key} | paper.model_dump(mode="json") for paper in papers
+            {"_id": uuid.uuid4().hex, "_kind": key} | document
+            for key, documents in grouped.items()
+            for document in documents
         ],
     }
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     return str(path)
+
+
+def dump_fallback(papers: list[Paper], directory: str, now: datetime) -> str:
+    return dump_documents(group_documents(papers), directory, now)
+
+
+def publish(repository: Repository, fs: FileSystem, config: PipelineConfig, now: datetime) -> tuple[dict, list[str]]:
+    """Route the records stored during the last ``days_to_fetch`` days and export them to xlsx."""
+    sorted_documents = reports.sort_documents(repository, config, now)
+    return _routed_counts(sorted_documents), reports.export(fs, config, sorted_documents, now)
+
+
+def save_journal(repository: Repository, report: "RunReport") -> None:
+    """Store the run summary and its errors for the dashboard; never hides the outcome of the run."""
+    try:
+        repository.save_run(report.to_document(), [error.to_document() for error in report.errors])
+    except Exception as e:
+        validation_logger.error(f"Could not save the run journal: {e!r}")
 
 
 def supply_logs(fs: FileSystem, config: PipelineConfig) -> None:
@@ -185,9 +237,7 @@ def run(
             )
         else:
             report.stored = store(repo, papers)
-            sorted_documents = reports.sort_documents(repo, config, now)
-            report.routed = _routed_counts(sorted_documents)
-            report.exported = reports.export(fs, config, sorted_documents, now)
+            report.routed, report.exported = publish(repo, fs, config, now)
 
         supply_logs(fs, config)
     except Exception as e:
@@ -197,10 +247,7 @@ def run(
     finally:
         report.finished_at = datetime.now(timezone.utc)
         if repo is not None:
-            try:
-                repo.save_run(report.to_document(), [error.to_document() for error in report.errors])
-            except Exception as e:  # the journal must not hide the outcome of the run
-                validation_logger.error(f"Could not save the run journal: {e!r}")
+            save_journal(repo, report)
             if own_repository:
                 repo.close()
     return report

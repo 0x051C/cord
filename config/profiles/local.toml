@@ -12,6 +12,7 @@ xlsx_path_impdiv = "sandbox/output/impdiv"
 xlsx_path_expdiv = "sandbox/output/expdiv"
 log_dir = "sandbox/logs"
 fallback_dump_path = "sandbox"
+staging_path = "sandbox/staging"   # Airflow run state (dags/cord_etl.py)
 
 # Input file name patterns (same as production)
 re_waybill = '^ttn_.*\.csv$'

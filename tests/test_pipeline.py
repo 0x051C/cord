@@ -1,5 +1,6 @@
 import json
 import os
+import re
 
 import pandas as pd
 
@@ -33,7 +34,8 @@ def test_full_run(generator, pipeline_config, fs, repository):
         assert "validation.log" in os.listdir(folder)
 
     # exported spreadsheets are flat, one column per leaf field
-    declaration_report = next(p for p in report.exported if os.path.basename(p).startswith("gtd_1"))
+    # "gtd_<date from>" is the declarations report ("gtd_updates_..." holds the updates)
+    declaration_report = next(p for p in report.exported if re.match(r"gtd_\d", os.path.basename(p)))
     frame = pd.read_excel(declaration_report)
     assert list(frame.columns) == PAPER_KINDS[2].model.flat_titles()
 
